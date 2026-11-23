@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { createContext, forwardRef, useContext, useEffect, useMemo, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { team } from "@/lib/teams";
 import { CheckIcon, CopyIcon, ShareIcon, XIcon } from "./icons";
@@ -90,20 +90,53 @@ export function initials(name: string) {
   return s.toUpperCase();
 }
 
+/** Profile pictures by nickname, so any Avatar in a lobby can show the player's photo. */
+const AvatarPics = createContext<Map<string, string>>(new Map());
+export function AvatarProvider({ players, children }: { players: { nickname: string; avatar: string | null }[]; children: ReactNode }) {
+  const key = players.map((p) => p.nickname + ":" + (p.avatar?.length ?? 0) + (p.avatar?.slice(-24) ?? "")).join("|");
+  const map = useMemo(
+    () => new Map(players.filter((p) => p.avatar).map((p) => [p.nickname, p.avatar!])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [key],
+  );
+  return <AvatarPics.Provider value={map}>{children}</AvatarPics.Provider>;
+}
+
 export function Avatar({
   name,
   size = 40,
   me,
   dim,
   className = "",
+  src,
 }: {
   name: string;
   size?: number;
   me?: boolean;
   dim?: boolean;
   className?: string;
+  src?: string | null;
 }) {
+  const pics = useContext(AvatarPics);
+  const pic = src ?? pics.get(name);
   const [bg, fg] = AVATAR_TONES[hash(name) % AVATAR_TONES.length];
+  if (pic)
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={pic}
+        alt=""
+        aria-hidden
+        referrerPolicy="no-referrer"
+        className={cx(
+          "shrink-0 rounded-full object-cover transition-opacity",
+          me && "ring-2 ring-volt ring-offset-2 ring-offset-ink",
+          dim && "opacity-35",
+          className,
+        )}
+        style={{ width: size, height: size, background: bg }}
+      />
+    );
   return (
     <span
       className={cx(

@@ -95,6 +95,20 @@ alter table lobbies add column if not exists away_score int not null default 0;
 -- Optional team images the host adds (https URL or small data:image).
 alter table lobbies add column if not exists home_logo text;
 alter table lobbies add column if not exists away_logo text;
+-- Pick window: when set, picks lock at this time.
+alter table lobbies add column if not exists picks_close_at timestamptz;
+alter table players add column if not exists avatar text;
+
+-- Lobby chat and quick reactions.
+create table if not exists messages (
+  id uuid primary key default gen_random_uuid(),
+  lobby_id uuid not null references lobbies(id) on delete cascade,
+  player_id uuid not null references players(id) on delete cascade,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists messages_lobby on messages (lobby_id, created_at desc);
+alter table messages enable row level security;
 
 alter table lobbies enable row level security;
 alter table lobby_hosts enable row level security;

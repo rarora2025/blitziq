@@ -41,9 +41,10 @@ type LobbyRow = {
   away_score: number;
   home_logo: string | null;
   away_logo: string | null;
+  picks_close_at: string | Date | null;
   version: number;
 };
-type PlayerRow = { id: string; nickname: string; is_host: boolean; joined_quarter: number; token_hash: string };
+type PlayerRow = { id: string; nickname: string; is_host: boolean; joined_quarter: number; token_hash: string; avatar: string | null };
 type QuestionRow = {
   id: string;
   quarter: number;
@@ -96,6 +97,7 @@ const lobbyInfo = (l: LobbyRow): LobbyInfo => ({
   awayScore: l.away_score ?? 0,
   homeLogo: l.home_logo ?? null,
   awayLogo: l.away_logo ?? null,
+  picksCloseAt: l.picks_close_at ? toIso(l.picks_close_at) : null,
   version: l.version,
 });
 const question = (q: QuestionRow): Question => ({ ...q });
@@ -364,7 +366,12 @@ async function buildView(d: Db, lobby: LobbyRow, tokens: Tokens): Promise<LobbyV
     isHost: p.is_host,
     joinedQuarter: p.joined_quarter,
     submitted: submittedIds.has(p.id),
+    avatar: p.avatar ?? null,
   }));
+  const messageRows = await d.query<{ id: string; player_id: string; body: string; created_at: string | Date }>(
+    `select id, player_id, body, created_at from messages where lobby_id = $1 order by created_at desc limit 40`,
+    [lobby.id],
+  );
 
   return {
     lobby: info,
@@ -376,6 +383,8 @@ async function buildView(d: Db, lobby: LobbyRow, tokens: Tokens): Promise<LobbyV
     revealed: roundStarted ? currentSubs : null,
     results,
     leaderboard: leaderboard(players, results),
+    messages: messageRows.reverse().map((m) => ({ id: m.id, playerId: m.player_id, body: m.body, at: toIso(m.created_at)! })),
+    now: new Date().toISOString(),
     host: isHost
       ? {
           allQuestions: all,
@@ -405,9 +414,14 @@ export async function act(rawCode: string, tokens: Tokens, action: Action): Prom
     if (!lobby) throw new GameError(404, "No lobby with that code.");
     const { isHost, player } = await identify(t, lobby, tokens);
 
-    if (action.type === "submit") {
+    if (action.type === "submit" || action.type === "profile" || action.type === "chat") {
       if (!player) throw new GameError(401, "Join this lobby first.");
-      changed = await submit(t, lobby, player, action);
+      changed =
+        action.type === "submit"
+          ? await submit(t, lobby, player, action)
+          : action.type === "profile"
+            ? await profile(t, lobby, player, action)
+            : await chat(t, lobby, player, action);
     } else {
       if (!isHost) throw new GameError(403, "Only the host can do that.");
       changed = await hostAction(t, lobby, action);
@@ -422,6 +436,9 @@ export async function act(rawCode: string, tokens: Tokens, action: Action): Prom
 
 async function submit(t: Db, lobby: LobbyRow, player: PlayerRow, a: Extract<Action, { type: "submit" }>) {
   if (lobby.phase !== "picks") throw new GameError(409, "Picks are closed.");
+  // A few seconds of grace so an auto-submit at 0:00 still lands.
+  if (lobby.picks_close_at && Date.now() > new Date(lobby.picks_close_at).getTime() + 5000)
+    throw new GameError(409, "Time's up. Picks are locked.");
   const qs = await t.query<QuestionRow>(
     `select id, options from lobby_questions where lobby_id = $1 and quarter = $2`,
     [lobby.id, lobby.quarter],
@@ -446,6 +463,48 @@ function checkSlot(quarter: unknown, position: unknown) {
   if (!ok(quarter, 1, 4) || !ok(position, 0, 4)) throw new GameError(400, "Bad slot.");
 }
 
+async function profile(t: Db, lobby: LobbyRow, player: PlayerRow, a: Extract<Action, { type: "profile" }>) {
+  let changed = false;
+  if (a.avatar !== undefined) {
+    const avatar = a.avatar === null ? null : cleanImage(a.avatar);
+    if (a.avatar !== null && !avatar) throw new GameError(400, "That picture didn't work. Try another.");
+    await t.query(`update players set avatar = $2 where id = $1`, [player.id, avatar]);
+    changed = true;
+  }
+  if (a.nickname !== undefined) {
+    const nickname = cleanNickname(a.nickname);
+    if (nickname !== player.nickname) {
+      const taken = await t.query(`select 1 from players where lobby_id = $1 and lower(nickname) = lower($2) and id <> $3`, [
+        lobby.id,
+        nickname,
+        player.id,
+      ]);
+      if (taken.length) throw new GameError(409, `Someone's already playing as ${nickname}.`);
+      await t.query(`update players set nickname = $2 where id = $1`, [player.id, nickname]);
+      if (player.is_host) await t.query(`update lobbies set host_name = $2 where id = $1`, [lobby.id, nickname]);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+async function chat(t: Db, lobby: LobbyRow, player: PlayerRow, a: Extract<Action, { type: "chat" }>) {
+  const body = clean(a.body, 140);
+  if (!body) return false;
+  const [recent] = await t.query<{ n: number }>(
+    `select count(*)::int as n from messages where player_id = $1 and created_at > now() - interval '5 seconds'`,
+    [player.id],
+  );
+  if (recent.n >= 3) throw new GameError(429, "Easy there. Give it a second.");
+  await t.query(`insert into messages (lobby_id, player_id, body) values ($1, $2, $3)`, [lobby.id, player.id, body]);
+  // Keep the chat small.
+  await t.query(
+    `delete from messages where lobby_id = $1 and id not in (select id from messages where lobby_id = $1 order by created_at desc limit 200)`,
+    [lobby.id],
+  );
+  return true;
+}
+
 function editable(lobby: LobbyRow, quarter: number) {
   return quarter > lobby.quarter || (quarter === lobby.quarter && lobby.phase === "setup");
 }
@@ -461,6 +520,10 @@ async function hostAction(t: Db, lobby: LobbyRow, a: Action): Promise<boolean> {
         [lobby.id, lobby.quarter],
       );
       if (n === 0) throw new GameError(400, `Add at least one question to Q${lobby.quarter} first.`);
+      const minutes = Number(a.minutes ?? 0);
+      if (!Number.isFinite(minutes) || minutes < 0 || minutes > 60) throw new GameError(400, "Pick window must be 0 to 60 minutes.");
+      lobby.picks_close_at = minutes > 0 ? new Date(Date.now() + minutes * 60_000).toISOString() : null;
+      await t.query(`update lobbies set picks_close_at = $2 where id = $1`, [lobby.id, lobby.picks_close_at]);
     }
     await t.query(`update lobbies set phase = $2 where id = $1`, [lobby.id, to]);
     lobby.phase = to;
@@ -468,6 +531,15 @@ async function hostAction(t: Db, lobby: LobbyRow, a: Action): Promise<boolean> {
   }
 
   switch (a.type) {
+    case "extendPicks": {
+      if (lobby.phase !== "picks") return false;
+      const minutes = Number(a.minutes);
+      if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 30) throw new GameError(400, "Bad extension.");
+      const base = Math.max(Date.now(), lobby.picks_close_at ? new Date(lobby.picks_close_at).getTime() : Date.now());
+      lobby.picks_close_at = new Date(base + minutes * 60_000).toISOString();
+      await t.query(`update lobbies set picks_close_at = $2 where id = $1`, [lobby.id, lobby.picks_close_at]);
+      return true;
+    }
     case "grade": {
       requireUuid(a.questionId, "Question");
       const [q] = await t.query<QuestionRow>(`select id, quarter, options from lobby_questions where id = $1 and lobby_id = $2`, [

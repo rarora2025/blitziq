@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "motion/react";
-import type { LobbyView, Question, Submission } from "@/lib/types";
+import type { Action, LobbyView, Question, Submission } from "@/lib/types";
+import { Countdown, LobbyChat } from "./social";
 import { Label, Pic, cx, optionImage } from "../ui";
 import { LockIcon } from "../icons";
 import { AvatarStack, PlayerGrid, Shell, ease } from "./common";
@@ -11,7 +12,15 @@ function currentQuestions(view: LobbyView) {
   return view.questions.filter((q) => q.quarter === view.lobby.quarter).sort((a, b) => a.position - b.position);
 }
 
-export function SubmittedScreen({ view }: { view: LobbyView }) {
+export function SubmittedScreen({
+  view,
+  secondsLeft,
+  act,
+}: {
+  view: LobbyView;
+  secondsLeft?: number | null;
+  act?: (a: Action) => Promise<unknown>;
+}) {
   const { lobby, players, me, submittedCount, mySubmission } = view;
   const questions = currentQuestions(view);
   return (
@@ -32,6 +41,11 @@ export function SubmittedScreen({ view }: { view: LobbyView }) {
         </motion.div>
         <h1 className="mt-7 text-[36px] font-bold tracking-[-0.03em] leading-none">Picks locked.</h1>
         <p className="mt-3 text-[17px] text-dim">Waiting for host to start Q{lobby.quarter}.</p>
+        {secondsLeft != null && (
+          <div className="mt-5">
+            <Countdown seconds={secondsLeft} />
+          </div>
+        )}
       </motion.section>
 
       <section className="mt-10 rounded-3xl bg-panel border border-line p-5">
@@ -44,6 +58,10 @@ export function SubmittedScreen({ view }: { view: LobbyView }) {
         </div>
         <PlayerGrid players={players} meId={me.playerId} highlight="submitted" />
       </section>
+
+      <div className="mt-6">
+        <LobbyChat view={view} act={act} />
+      </div>
 
       {mySubmission && (
         <section className="mt-6">
@@ -78,7 +96,7 @@ export function MyPicks({ questions, submission }: { questions: Question[]; subm
 }
 
 /** Live round and grading: everyone's picks are now public. */
-export function LiveScreen({ view }: { view: LobbyView }) {
+export function LiveScreen({ view, act }: { view: LobbyView; act?: (a: Action) => Promise<unknown> }) {
   const { lobby, players, me, mySubmission, revealed } = view;
   const questions = currentQuestions(view);
   const grading = lobby.phase === "grading";
@@ -104,6 +122,10 @@ export function LiveScreen({ view }: { view: LobbyView }) {
           </p>
         </div>
       </motion.section>
+
+      <div className="mt-3">
+        <LobbyChat view={view} act={act} />
+      </div>
 
       {mySubmission && (
         <section className="mt-8">

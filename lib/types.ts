@@ -61,6 +61,14 @@ export interface PlayerSummary {
   isHost: boolean;
   joinedQuarter: number;
   submitted: boolean;
+  avatar: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  playerId: string;
+  body: string;
+  at: string;
 }
 
 export interface PickResult {
@@ -114,6 +122,8 @@ export interface LobbyInfo {
   awayScore: number;
   homeLogo: string | null;
   awayLogo: string | null;
+  /** ISO time picks lock, when the host set a pick window. */
+  picksCloseAt: string | null;
   version: number;
 }
 
@@ -130,6 +140,9 @@ export interface LobbyView {
   /** Published quarters only. */
   results: QuarterResult[];
   leaderboard: LeaderRow[];
+  messages: ChatMessage[];
+  /** Server clock, for countdowns. */
+  now: string;
   host?: {
     allQuestions: Question[];
     keys: Record<string, Key>;
@@ -139,7 +152,10 @@ export interface LobbyView {
 }
 
 export type Action =
-  | { type: "openPicks" }
+  | { type: "openPicks"; minutes?: number }
+  | { type: "extendPicks"; minutes: number }
+  | { type: "profile"; nickname?: string; avatar?: string | null }
+  | { type: "chat"; body: string }
   | { type: "startRound" }
   | { type: "endRound" }
   | { type: "publish" }
@@ -167,3 +183,6 @@ export type Action =
     }
   | { type: "submit"; answers: Record<string, string>; lock: string | null }
   | { type: "removePlayer"; playerId: string };
+
+/** Default pick window: Q1 gets time before kickoff, later quarters fit a commercial break. */
+export const defaultPickMinutes = (quarter: number) => (quarter === 1 ? 10 : 3);

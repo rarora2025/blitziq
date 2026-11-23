@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Countdown } from "./social";
 import { AnimatePresence, motion } from "motion/react";
 import type { LobbyView, Question } from "@/lib/types";
 import { useStored } from "@/lib/client";
@@ -14,8 +15,10 @@ export function PicksScreen({
   view,
   onSubmit,
   submitting,
+  secondsLeft,
 }: {
   view: LobbyView;
+  secondsLeft?: number | null;
   onSubmit: (d: Draft) => void;
   submitting?: boolean;
 }) {
@@ -63,6 +66,15 @@ export function PicksScreen({
   };
 
   const answered = questions.filter((q) => draft.answers[q.id]).length;
+
+  // When the clock hits zero, lock in whatever has been picked.
+  const autoSent = useRef(false);
+  useEffect(() => {
+    if (secondsLeft === 0 && !autoSent.current && answered > 0) {
+      autoSent.current = true;
+      onSubmit(draft);
+    }
+  }, [secondsLeft, answered, draft, onSubmit]);
   const current = questions[index];
 
   return (
@@ -96,10 +108,10 @@ export function PicksScreen({
     >
       <div className="pt-4">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-[15px] font-semibold tracking-tight">Q{lobby.quarter} picks</span>
-          <span className="text-[13px] text-mute tnum">
-            {answered} of {n} answered
+          <span className="text-[15px] font-semibold tracking-tight">
+            Q{lobby.quarter} picks <span className="text-mute font-normal tnum">· {answered}/{n}</span>
           </span>
+          {secondsLeft != null ? <Countdown seconds={secondsLeft} compact /> : <span className="text-[13px] text-mute">No time limit</span>}
         </div>
         <div className="flex gap-1.5" role="tablist" aria-label="Questions">
           {questions.map((q, i) => (

@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useLobby, ApiError } from "@/lib/client";
-import type { Action, LobbyView, Phase, Question } from "@/lib/types";
-import { Avatar, Button, Field, ImageField, InviteButton, Label, Matchup, Sheet, TeamChip, Toast, Wordmark, cx, inputCls } from "../ui";
+import { defaultPickMinutes, type Action, type LobbyView, type Phase, type Question } from "@/lib/types";
+import { Avatar, AvatarProvider, Button, Field, ImageField, InviteButton, Label, Matchup, Sheet, TeamChip, Toast, Wordmark, cx, inputCls } from "../ui";
 import { ArrowRight, CheckIcon, GridIcon, LockIcon, PencilIcon, PlusIcon, SwapIcon, TrashIcon, XIcon } from "../icons";
 import { Loading } from "../player/PlayerApp";
 import { Leaderboard } from "../screens/Leaderboard";
 import { TeamSelect } from "../CreateLobby";
 import { Grader } from "./Grader";
+import { Countdown, useSecondsLeft } from "../screens/social";
 import { QuestionBank, QuestionEditor, type Draft } from "./QuestionBank";
 
 const STEPS = ["Open Picks", "Start Round", "Grade Questions", "Publish Results", "Next Quarter"];
@@ -41,7 +42,9 @@ export function HostApp({ code }: { code: string }) {
 
   return (
     <div className="min-h-dvh">
-      <Dashboard view={view} run={run} runQuiet={runQuiet} busy={busy} />
+      <AvatarProvider players={view.players}>
+        <Dashboard view={view} run={run} runQuiet={runQuiet} busy={busy} />
+      </AvatarProvider>
       <Toast message={toast} onClose={() => setToast(null)} />
     </div>
   );
@@ -151,6 +154,9 @@ function Control({ view, run, busy }: { view: LobbyView; run: (a: Action) => voi
   const { lobby, players, submittedCount } = view;
   const step = STEP_OF[lobby.phase];
   const q = lobby.quarter;
+  const [windowMin, setWindowMin] = useState<number>(defaultPickMinutes(q));
+  useEffect(() => setWindowMin(defaultPickMinutes(q)), [q]);
+  const secondsLeft = useSecondsLeft(lobby.phase === "picks" ? lobby.picksCloseAt : null, view.now);
   const qs = view.host!.allQuestions.filter((x) => x.quarter === q);
   const graded = qs.filter((x) => view.host!.keys[x.id]?.voided || view.host!.keys[x.id]?.correct).length;
 
@@ -160,7 +166,7 @@ function Control({ view, run, busy }: { view: LobbyView; run: (a: Action) => voi
         return {
           title: `Get Q${q} ready`,
           sub: qs.length === 5 ? "Five questions are set. Swap any of them, then open picks." : `${qs.length} of 5 questions set.`,
-          action: { type: "openPicks" },
+          action: { type: "openPicks", minutes: windowMin },
           label: `Open Q${q} Picks`,
           disabled: qs.length === 0,
         };
@@ -226,9 +232,36 @@ function Control({ view, run, busy }: { view: LobbyView; run: (a: Action) => voi
           </div>
         </div>
         {cfg.action && (
-          <Button onClick={() => run(cfg.action!)} loading={busy === cfg.action.type} disabled={cfg.disabled} className="md:min-w-[240px]">
-            {cfg.label} <ArrowRight size={18} />
-          </Button>
+          <div className="flex flex-col gap-3 md:items-end">
+            <Button onClick={() => run(cfg.action!)} loading={busy === cfg.action.type} disabled={cfg.disabled} className="md:min-w-[240px]">
+              {cfg.label} <ArrowRight size={18} />
+            </Button>
+            {lobby.phase === "setup" && (
+              <div className="flex flex-wrap items-center gap-1.5 md:justify-end">
+                <span className="text-[13px] text-mute mr-1">Pick window</span>
+                {[0, 1, 2, 3, 5, 10, 15].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setWindowMin(m)}
+                    className={cx(
+                      "h-8 px-2.5 rounded-lg text-[13px] font-semibold tnum transition-colors",
+                      windowMin === m ? "bg-fg text-ink" : "bg-raised-2 text-dim hover:text-fg",
+                    )}
+                  >
+                    {m === 0 ? "None" : `${m}m`}
+                  </button>
+                ))}
+              </div>
+            )}
+            {lobby.phase === "picks" && secondsLeft != null && (
+              <div className="flex items-center gap-2 md:justify-end">
+                <Countdown seconds={secondsLeft} compact />
+                <button onClick={() => run({ type: "extendPicks", minutes: 1 })} className="h-8 px-3 rounded-lg bg-raised-2 text-[13px] font-semibold text-dim hover:text-fg">
+                  +1 min
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
       <ol className="flex border-t border-line overflow-x-auto [scrollbar-width:none]">
