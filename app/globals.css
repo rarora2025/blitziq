@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #070708;
+  --color-panel: #0f0f11;
+  --color-raised: #17171a;
+  --color-raised-2: #1f1f23;
+  --color-line: rgb(255 255 255 / 0.07);
+  --color-line-strong: rgb(255 255 255 / 0.13);
+  --color-fg: #f4f4f2;
+  --color-dim: #a3a3a8;
+  --color-mute: #6c6c73;
+  --color-volt: #d4ff3f;
+  --color-volt-ink: #0a0d00;
+  --color-miss: #ff6b5b;
+
+  --font-sans: var(--font-text), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-barlow), var(--font-text), ui-sans-serif, sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  color-scheme: dark;
+  --volt: #d4ff3f;
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: var(--color-fg);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+::selection {
+  background: var(--color-volt);
+  color: var(--color-volt-ink);
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.safe-b {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+}
+.safe-t {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+/* Soft field-light glow at the top of game screens. One, faint. */
+.field-light {
+  background: radial-gradient(120% 60% at 50% -10%, rgb(212 255 63 / 0.06), transparent 60%);
+}
+
+@keyframes blitz-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.pulse-dot {
+  animation: blitz-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes blitz-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
