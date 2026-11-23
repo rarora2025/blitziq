@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { api, ApiError } from "@/lib/client";
 import { render } from "@/lib/seed-questions";
 import { CATEGORIES, type BankQuestion, type Option } from "@/lib/types";
-import { Button, Field, Sheet, Spinner, cx, inputCls } from "../ui";
+import { Button, Field, ImageField, Sheet, Spinner, cx, inputCls } from "../ui";
 import { PencilIcon, PlusIcon, SearchIcon, SparkIcon, TrashIcon, XIcon } from "../icons";
 
 export type Draft = { id?: string; category: string; prompt: string; options: Option[]; rule: string };
@@ -52,6 +52,9 @@ export function QuestionEditor({
   const setOpt = (i: number, label: string) =>
     setD((x) => ({ ...x, options: x.options.map((o, j) => (j === i ? { ...o, label: label.slice(0, 48) } : o)) }));
 
+  const setImg = (i: number, image: string | null) =>
+    setD((x) => ({ ...x, options: x.options.map((o, j) => (j === i ? { ...o, image: image ?? undefined } : o)) }));
+
   const save = async () => {
     setBusy(true);
     setError(null);
@@ -79,17 +82,16 @@ export function QuestionEditor({
         </Field>
         <div>
           <span className="block text-[13px] font-medium text-dim mb-2">Answers</span>
+          <span className="block text-[13px] text-mute -mt-1 mb-2.5">Tap the square to add a player photo or logo. Upload one, or paste an image link (from ESPN or anywhere).</span>
           <div className="space-y-2">
             {d.options.map((o, i) => (
-              <div key={i} className="flex gap-2">
-                <span className="w-9 shrink-0 h-13 flex items-center justify-center font-semibold text-mute text-[15px]">
-                  {"ABCD"[i]}
-                </span>
+              <div key={i} className="flex flex-wrap gap-2">
+                <ImageField value={o.image} onChange={(v) => setImg(i, v)} label={`Picture for answer ${"ABCD"[i]}`} />
                 <input
                   value={o.label}
                   onChange={(e) => setOpt(i, e.target.value)}
                   placeholder={i === 0 ? "{away}" : i === 1 ? "{home}" : "Another answer"}
-                  className={inputCls}
+                  className={cx(inputCls, "flex-1 w-auto min-w-0")}
                 />
                 {d.options.length > 2 && (
                   <button

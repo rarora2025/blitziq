@@ -92,6 +92,9 @@ create index if not exists submissions_lobby on submissions (lobby_id);
 -- Live score, entered by the host (no sports data feed).
 alter table lobbies add column if not exists home_score int not null default 0;
 alter table lobbies add column if not exists away_score int not null default 0;
+-- Optional team images the host adds (https URL or small data:image).
+alter table lobbies add column if not exists home_logo text;
+alter table lobbies add column if not exists away_logo text;
 
 alter table lobbies enable row level security;
 alter table lobby_hosts enable row level security;

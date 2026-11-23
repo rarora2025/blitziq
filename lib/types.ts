@@ -16,6 +16,8 @@ export type Category = (typeof CATEGORIES)[number] | string;
 export interface Option {
   id: string;
   label: string;
+  /** Optional picture: https URL or a small data:image URL. */
+  image?: string;
 }
 
 /** A reusable template in the bank. May contain {home}, {away} and {q} placeholders. */
@@ -110,6 +112,8 @@ export interface LobbyInfo {
   publishedThrough: number;
   homeScore: number;
   awayScore: number;
+  homeLogo: string | null;
+  awayLogo: string | null;
   version: number;
 }
 
@@ -152,6 +156,14 @@ export type Action =
   | { type: "removeQuestion"; questionId: string }
   | { type: "moveQuestion"; questionId: string; direction: -1 | 1 }
   | { type: "addScore"; side: "home" | "away"; delta: number }
-  | { type: "updateGame"; name: string; home: string; away: string; gameDate: string | null }
+  | {
+      type: "updateGame";
+      name: string;
+      home: string;
+      away: string;
+      gameDate: string | null;
+      homeLogo?: string | null;
+      awayLogo?: string | null;
+    }
   | { type: "submit"; answers: Record<string, string>; lock: string | null }
   | { type: "removePlayer"; playerId: string };

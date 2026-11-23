@@ -39,6 +39,8 @@ type LobbyRow = {
   published_through: number;
   home_score: number;
   away_score: number;
+  home_logo: string | null;
+  away_logo: string | null;
   version: number;
 };
 type PlayerRow = { id: string; nickname: string; is_host: boolean; joined_quarter: number; token_hash: string };
@@ -92,6 +94,8 @@ const lobbyInfo = (l: LobbyRow): LobbyInfo => ({
   publishedThrough: l.published_through,
   homeScore: l.home_score ?? 0,
   awayScore: l.away_score ?? 0,
+  homeLogo: l.home_logo ?? null,
+  awayLogo: l.away_logo ?? null,
   version: l.version,
 });
 const question = (q: QuestionRow): Question => ({ ...q });
@@ -126,16 +130,31 @@ function cleanNickname(n: unknown) {
   return v;
 }
 
+/** Accepts an https image URL or a small inline image; anything else is dropped. */
+export function cleanImage(v: unknown): string | null {
+  if (typeof v !== "string" || !v) return null;
+  if (/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(v) && v.length <= 200_000) return v;
+  try {
+    const u = new URL(v);
+    if (u.protocol === "https:" && v.length <= 1000) return u.toString();
+  } catch {}
+  return null;
+}
+
 function cleanQuestion(q: { category?: unknown; prompt?: unknown; options?: unknown; rule?: unknown }) {
   const prompt = clean(q.prompt, 140);
   if (prompt.length < 6) throw new GameError(400, "Write a question first.");
-  const labels = (Array.isArray(q.options) ? q.options : [])
-    .map((o: unknown) => clean(typeof o === "string" ? o : (o as Option)?.label, 48))
-    .filter(Boolean);
+  const raw = (Array.isArray(q.options) ? q.options : [])
+    .map((o: unknown) => ({
+      label: clean(typeof o === "string" ? o : (o as Option)?.label, 48),
+      image: typeof o === "string" ? null : cleanImage((o as Option)?.image),
+    }))
+    .filter((o) => o.label);
+  const labels = raw.map((o) => o.label);
   if (labels.length < 2 || labels.length > 4) throw new GameError(400, "Questions need 2 to 4 answers.");
   if (new Set(labels.map((l) => l.toLowerCase())).size !== labels.length)
     throw new GameError(400, "Each answer needs to be different.");
-  const options = labels.map((label, i) => ({ id: "abcd"[i], label }));
+  const options = raw.map((o, i) => ({ id: "abcd"[i], label: o.label, ...(o.image ? { image: o.image } : {}) }));
   return { category: clean(q.category, 32) || "Wild cards", prompt, options, rule: clean(q.rule, 280) };
 }
 
@@ -218,7 +237,7 @@ async function insertFromBank(
       position,
       b.category,
       render(b.prompt, ctx),
-      JSON.stringify(b.options.map((o) => ({ id: o.id, label: render(o.label, ctx) }))),
+      JSON.stringify(b.options.map((o) => ({ ...o, label: render(o.label, ctx) }))),
       render(b.rule, ctx),
       b.id ?? null,
     ],
@@ -568,13 +587,14 @@ async function hostAction(t: Db, lobby: LobbyRow, a: Action): Promise<boolean> {
           ]);
         }
       }
-      await t.query(`update lobbies set name = $2, home_team = $3, away_team = $4, game_date = $5 where id = $1`, [
-        lobby.id,
-        name,
-        home,
-        away,
-        gameDate,
-      ]);
+      const homeLogo = a.homeLogo === undefined ? lobby.home_logo : cleanImage(a.homeLogo);
+      const awayLogo = a.awayLogo === undefined ? lobby.away_logo : cleanImage(a.awayLogo);
+      await t.query(
+        `update lobbies set name = $2, home_team = $3, away_team = $4, game_date = $5, home_logo = $6, away_logo = $7 where id = $1`,
+        [lobby.id, name, home, away, gameDate, homeLogo, awayLogo],
+      );
+      lobby.home_logo = homeLogo;
+      lobby.away_logo = awayLogo;
       Object.assign(lobby, { name, home_team: home, away_team: away, game_date: gameDate });
       return true;
     }

@@ -120,8 +120,9 @@ export function Avatar({
   );
 }
 
-export function TeamChip({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
+export function TeamChip({ name, size = "md", logo }: { name: string; size?: "sm" | "md" | "lg"; logo?: string | null }) {
   const t = team(name);
+  if (logo) return <Pic src={logo} size={size === "sm" ? 22 : size === "md" ? 28 : 40} rounded="xl" />;
   return (
     <span className="inline-flex items-center gap-2">
       <span
@@ -140,7 +141,19 @@ export function TeamChip({ name, size = "md" }: { name: string; size?: "sm" | "m
 }
 
 /** Broadcast-style matchup line: AWAY @ HOME */
-export function Matchup({ home, away, size = "md" }: { home: string; away: string; size?: "sm" | "md" | "lg" }) {
+export function Matchup({
+  home,
+  away,
+  size = "md",
+  homeLogo,
+  awayLogo,
+}: {
+  home: string;
+  away: string;
+  size?: "sm" | "md" | "lg";
+  homeLogo?: string | null;
+  awayLogo?: string | null;
+}) {
   return (
     <span
       className={cx(
@@ -150,11 +163,11 @@ export function Matchup({ home, away, size = "md" }: { home: string; away: strin
         size === "lg" && "gap-3 text-xl",
       )}
     >
-      <TeamChip name={away} size={size} />
+      <TeamChip name={away} size={size} logo={awayLogo} />
       <span>{away}</span>
       <span className="text-mute font-normal">at</span>
       <span>{home}</span>
-      <TeamChip name={home} size={size} />
+      <TeamChip name={home} size={size} logo={homeLogo} />
     </span>
   );
 }
@@ -385,8 +398,147 @@ export function Worth({ locked, className = "" }: { locked?: boolean; className?
         {base} PTS
       </span>
       <span>
-        if right · <span className={cx("font-semibold tnum", locked ? "text-volt" : "text-fg")}>{solo}</span> if you&apos;re the only one
+        if right / <span className={cx("font-semibold tnum", locked ? "text-volt" : "text-fg")}>{solo}</span> if you&apos;re the only one
       </span>
     </span>
+  );
+}
+
+/** An option's picture: its own image, or the team logo when the answer is a team. */
+export function optionImage(o: { label: string; image?: string }, lobby: { home: string; away: string; homeLogo: string | null; awayLogo: string | null }) {
+  if (o.image) return o.image;
+  const l = o.label.toLowerCase();
+  if (l === lobby.home.toLowerCase()) return lobby.homeLogo;
+  if (l === lobby.away.toLowerCase()) return lobby.awayLogo;
+  return null;
+}
+
+export function Pic({ src, size = 40, rounded = "full", className = "" }: { src: string; size?: number; rounded?: "full" | "xl"; className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+      className={cx("shrink-0 object-cover bg-raised-2", rounded === "full" ? "rounded-full" : "rounded-xl", className)}
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+/** Downscale a picked photo to a small square webp data URL so it can live with the question. */
+export async function shrinkImage(file: File, size = 160): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const s = Math.min(img.naturalWidth, img.naturalHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size);
+    const webp = canvas.toDataURL("image/webp", 0.82);
+    return webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/jpeg", 0.85);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Upload a photo or paste an image link. Shows the current picture as the button. */
+export function ImageField({
+  value,
+  onChange,
+  size = 52,
+  label = "Add picture",
+}: {
+  value: string | null | undefined;
+  onChange: (v: string | null) => void;
+  size?: number;
+  label?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [link, setLink] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const pick = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      onChange(await shrinkImage(f));
+      setOpen(false);
+      setErr(null);
+    } catch {
+      setErr("Couldn't read that image.");
+    }
+  };
+  return (
+    <div className="contents">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={label}
+        title={label}
+        className={cx(
+          "shrink-0 rounded-xl flex items-center justify-center overflow-hidden transition-colors",
+          value ? "" : "border border-dashed border-line-strong text-mute hover:text-fg hover:border-fg/40",
+          open && "ring-2 ring-volt/60",
+        )}
+        style={{ width: size, height: size }}
+      >
+        {value ? (
+          <Pic src={value} size={size} rounded="xl" />
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3.5" y="4.5" width="17" height="15" rx="3" />
+            <circle cx="9" cy="10" r="1.8" />
+            <path d="M20.5 16l-5-5-8.5 8.5" />
+          </svg>
+        )}
+      </button>
+      {open && (
+        <div className="order-last basis-full w-full rounded-xl bg-raised border border-line p-3 space-y-2">
+          <div className="flex gap-2">
+            <label className="h-10 px-3 rounded-lg bg-raised-2 hover:bg-[#2a2a30] text-[14px] font-semibold inline-flex items-center cursor-pointer">
+              Upload photo
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+            </label>
+            {value && (
+              <button type="button" onClick={() => (onChange(null), setOpen(false))} className="h-10 px-3 rounded-lg text-[14px] font-semibold text-mute hover:text-miss">
+                Remove
+              </button>
+            )}
+          </div>
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!/^https:\/\/\S+$/.test(link.trim())) return setErr("Paste an https:// image link.");
+              onChange(link.trim());
+              setLink("");
+              setErr(null);
+              setOpen(false);
+            }}
+          >
+            <input
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="or paste an image link"
+              className="flex-1 min-w-0 h-10 rounded-lg bg-ink/50 border border-line px-3 text-[14px] outline-none focus:border-volt/60"
+            />
+            <button type="submit" className="h-10 px-3 rounded-lg bg-raised-2 text-[14px] font-semibold">
+              Use
+            </button>
+          </form>
+          {err && <p className="text-[13px] text-miss">{err}</p>}
+        </div>
+      )}
+    </div>
   );
 }

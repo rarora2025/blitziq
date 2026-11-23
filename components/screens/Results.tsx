@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { LobbyView, Question, QuarterResult } from "@/lib/types";
 import { useStored } from "@/lib/client";
-import { Avatar, Button, CategoryChip, Label, cx } from "../ui";
+import { Avatar, Button, CategoryChip, Label, Pic, cx, optionImage } from "../ui";
 import { CheckIcon, LockIcon } from "../icons";
 import { Leaderboard } from "./Leaderboard";
 import { Shell, ease } from "./common";
@@ -174,7 +174,10 @@ function Reveal({ q, result, view, index, total }: { q: Question; result: Quarte
               )}
             >
               <span className="flex-1 min-w-0">
-                <span className="block text-[17px] font-semibold tracking-tight leading-snug">{o.label}</span>
+                <span className="flex items-center gap-3">
+                  {optionImage(o, view.lobby) && <Pic src={optionImage(o, view.lobby)!} size={36} />}
+                  <span className="text-[17px] font-semibold tracking-tight leading-snug">{o.label}</span>
+                </span>
                 {isMine && (
                   <span className={cx("mt-0.5 inline-flex items-center gap-1 text-[12px] font-semibold uppercase tracking-[0.1em]", isCorrect ? "text-volt-ink/70" : "text-dim")}>
                     Your pick {mine?.lock && <LockIcon size={11} strokeWidth={2.8} />}

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { LobbyView, Question } from "@/lib/types";
 import { useStored } from "@/lib/client";
-import { Button, CategoryChip, Worth, cx } from "../ui";
+import { Button, CategoryChip, Pic, Worth, cx, optionImage } from "../ui";
 import { CheckIcon, ChevronLeft, LockIcon } from "../icons";
 import { Shell, ease } from "./common";
 
@@ -148,6 +148,7 @@ export function PicksScreen({
             ) : (
               current && (
                 <QuestionCard
+                  lobby={lobby}
                   q={current}
                   index={index}
                   total={n}
@@ -167,6 +168,7 @@ export function PicksScreen({
 }
 
 function QuestionCard({
+  lobby,
   q,
   index,
   total,
@@ -176,6 +178,7 @@ function QuestionCard({
   onChoose,
   onLock,
 }: {
+  lobby: LobbyView["lobby"];
   q: Question;
   index: number;
   total: number;
@@ -215,7 +218,10 @@ function QuestionCard({
                 sel ? "bg-volt/[0.09] border-volt text-fg" : "bg-raised border-line hover:border-line-strong text-fg",
               )}
             >
-              <span className="text-[18px] font-semibold tracking-tight leading-snug">{o.label}</span>
+              <span className="flex items-center gap-3.5 min-w-0">
+                {optionImage(o, lobby) && <Pic src={optionImage(o, lobby)!} size={44} />}
+                <span className="text-[18px] font-semibold tracking-tight leading-snug">{o.label}</span>
+              </span>
               <span
                 className={cx(
                   "size-7 shrink-0 rounded-full flex items-center justify-center transition-all duration-200",
@@ -294,7 +300,7 @@ function LockToggle({
           {locked ? "This is your Lock" : lockTaken ? "Move your Lock here" : "Make this your Lock"}
         </span>
         <span className={cx("block text-[13px] mt-0.5", locked ? "text-volt-ink/70" : "text-mute")}>
-          {disabled ? "Pick an answer first" : "20 pts if right · 100 if you're the only one"}
+          {disabled ? "Pick an answer first" : "20 pts if right / 100 if you're the only one"}
         </span>
       </span>
     </button>

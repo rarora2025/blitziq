@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import type { LobbyView, Question, Submission } from "@/lib/types";
-import { Label, cx } from "../ui";
+import { Label, Pic, cx, optionImage } from "../ui";
 import { LockIcon } from "../icons";
 import { AvatarStack, PlayerGrid, Shell, ease } from "./common";
 import { Bars, Field, Scoreboard } from "./Scoreboard";
@@ -124,7 +124,7 @@ export function LiveScreen({ view }: { view: LobbyView }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.06 * i, duration: 0.4, ease }}
           >
-            <Distribution q={q} subs={subs} meId={me.playerId} names={names} />
+            <Distribution q={q} subs={subs} meId={me.playerId} names={names} lobby={lobby} />
           </motion.div>
         ))}
       </div>
@@ -133,11 +133,13 @@ export function LiveScreen({ view }: { view: LobbyView }) {
 }
 
 function Distribution({
+  lobby,
   q,
   subs,
   meId,
   names,
 }: {
+  lobby: LobbyView["lobby"];
   q: Question;
   subs: Submission[];
   meId: string | null;
@@ -170,6 +172,7 @@ function Distribution({
                 transition={{ duration: 0.8, ease }}
               />
               <span className="relative flex-1 min-w-0 flex items-center gap-2 text-[15px] font-medium truncate">
+                {optionImage(o, lobby) && <Pic src={optionImage(o, lobby)!} size={24} />}
                 {o.label}
                 {myLock && <LockIcon size={14} className="text-volt shrink-0" strokeWidth={2.6} />}
               </span>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useLobby, ApiError } from "@/lib/client";
 import type { Action, LobbyView, Phase, Question } from "@/lib/types";
-import { Avatar, Button, Field, InviteButton, Label, Matchup, Sheet, TeamChip, Toast, Wordmark, cx, inputCls } from "../ui";
+import { Avatar, Button, Field, ImageField, InviteButton, Label, Matchup, Sheet, TeamChip, Toast, Wordmark, cx, inputCls } from "../ui";
 import { ArrowRight, CheckIcon, GridIcon, LockIcon, PencilIcon, PlusIcon, SwapIcon, TrashIcon, XIcon } from "../icons";
 import { Loading } from "../player/PlayerApp";
 import { Leaderboard } from "../screens/Leaderboard";
@@ -89,6 +89,9 @@ function Dashboard({ view, run, runQuiet, busy }: { view: LobbyView; run: Run; r
             </div>
           </button>
           <div className="flex-1" />
+          <button onClick={() => setSettingsOpen(true)} className="hidden md:inline-flex h-9 px-3 rounded-lg text-[14px] font-semibold text-dim hover:text-fg hover:bg-white/5 items-center">
+            Teams &amp; logos
+          </button>
           <button onClick={() => setBankOpen(true)} className="hidden md:inline-flex h-9 px-3 rounded-lg text-[14px] font-semibold text-dim hover:text-fg hover:bg-white/5 items-center">
             Question bank
           </button>
@@ -500,6 +503,8 @@ function SettingsSheet({ open, onClose, view, run }: { open: boolean; onClose: (
   const [home, setHome] = useState(lobby.home);
   const [away, setAway] = useState(lobby.away);
   const [date, setDate] = useState(lobby.gameDate ?? "");
+  const [homeLogo, setHomeLogo] = useState<string | null>(lobby.homeLogo);
+  const [awayLogo, setAwayLogo] = useState<string | null>(lobby.awayLogo);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     if (!open) return;
@@ -507,6 +512,8 @@ function SettingsSheet({ open, onClose, view, run }: { open: boolean; onClose: (
     setHome(lobby.home);
     setAway(lobby.away);
     setDate(lobby.gameDate ?? "");
+    setHomeLogo(lobby.homeLogo);
+    setAwayLogo(lobby.awayLogo);
   }, [open, lobby.name, lobby.home, lobby.away, lobby.gameDate]);
   return (
     <Sheet
@@ -526,6 +533,19 @@ function SettingsSheet({ open, onClose, view, run }: { open: boolean; onClose: (
             <TeamSelect label="Home team" value={home} onChange={setHome} />
           </Field>
         </div>
+        <div>
+          <span className="block text-[13px] font-medium text-dim mb-2">Team logos (optional)</span>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <span className="flex flex-wrap items-center gap-3">
+              <ImageField value={awayLogo} onChange={setAwayLogo} label={`${away} logo`} />
+              <span className="text-[14px] text-dim">{away}</span>
+            </span>
+            <span className="flex flex-wrap items-center gap-3">
+              <ImageField value={homeLogo} onChange={setHomeLogo} label={`${home} logo`} />
+              <span className="text-[14px] text-dim">{home}</span>
+            </span>
+          </div>
+        </div>
         <Field label="Game day">
           <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
@@ -536,7 +556,7 @@ function SettingsSheet({ open, onClose, view, run }: { open: boolean; onClose: (
           onClick={async () => {
             setSaving(true);
             try {
-              await run({ type: "updateGame", name, home, away, gameDate: date || null });
+              await run({ type: "updateGame", name, home, away, gameDate: date || null, homeLogo, awayLogo });
               onClose();
             } catch {
             } finally {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import type { Key, LobbyView, Question, QuarterResult } from "@/lib/types";
-import { cx } from "../ui";
+import { Pic, cx, optionImage } from "../ui";
 import { CheckIcon, LockIcon, SlashIcon } from "../icons";
 
 /**
@@ -95,6 +95,7 @@ export function Grader({
                       key.voided && "opacity-40",
                     )}
                   >
+                    {optionImage(o, view.lobby) && <Pic src={optionImage(o, view.lobby)!} size={26} />}
                     <span className="flex-1 min-w-0 text-[15px] font-semibold leading-tight">{o.label}</span>
                     <span className={cx("shrink-0 text-[13px] tnum font-semibold flex items-center gap-1", sel ? "text-volt-ink/70" : "text-mute")}>
                       {locks > 0 && (

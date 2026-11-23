@@ -140,7 +140,7 @@ export function MatchupCard({ lobby }: { lobby: LobbyInfo }) {
     : null;
   return (
     <div className="rounded-2xl bg-panel border border-line px-4 py-3.5 flex items-center justify-between gap-3">
-      <Matchup home={lobby.home} away={lobby.away} size="sm" />
+      <Matchup home={lobby.home} away={lobby.away} homeLogo={lobby.homeLogo} awayLogo={lobby.awayLogo} size="sm" />
       {date && <span className="text-[13px] text-mute shrink-0">{date}</span>}
     </div>
   );

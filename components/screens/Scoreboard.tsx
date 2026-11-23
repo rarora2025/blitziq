@@ -3,18 +3,22 @@
 import { motion, AnimatePresence } from "motion/react";
 import type { LobbyInfo } from "@/lib/types";
 import { team } from "@/lib/teams";
-import { Wordmark } from "../ui";
+import { Pic, Wordmark } from "../ui";
 
-function TeamMark({ name }: { name: string }) {
+function TeamMark({ name, logo }: { name: string; logo: string | null }) {
   const t = team(name);
   return (
     <div className="flex flex-col items-center gap-2 w-20">
+      {logo ? (
+        <Pic src={logo} size={56} rounded="xl" />
+      ) : (
       <span
         className="size-14 rounded-2xl flex items-center justify-center font-display font-extrabold text-[20px] tracking-wide text-white"
         style={{ background: t.color, boxShadow: "inset 0 0 0 1px rgb(255 255 255 / 0.14), 0 10px 30px -12px " + t.color }}
       >
         {t.abbr}
       </span>
+      )}
       <span className="text-[14px] font-semibold text-dim truncate max-w-full">{t.name}</span>
     </div>
   );
@@ -45,13 +49,13 @@ export function Scoreboard({ lobby }: { lobby: LobbyInfo }) {
   return (
     <div className="rounded-3xl bg-panel border border-line px-4 pt-5 pb-4">
       <div className="flex items-center justify-between">
-        <TeamMark name={lobby.away} />
+        <TeamMark name={lobby.away} logo={lobby.awayLogo} />
         <div className="font-display font-bold text-[52px] leading-none tracking-tight flex items-center gap-3">
           <Score value={lobby.awayScore} />
           <span className="text-mute text-[40px]">–</span>
           <Score value={lobby.homeScore} />
         </div>
-        <TeamMark name={lobby.home} />
+        <TeamMark name={lobby.home} logo={lobby.homeLogo} />
       </div>
       <div className="mt-4 flex items-center justify-center gap-2.5">
         {live ? (
