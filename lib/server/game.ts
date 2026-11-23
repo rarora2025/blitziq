@@ -37,6 +37,8 @@ type LobbyRow = {
   quarter: number;
   phase: Phase;
   published_through: number;
+  home_score: number;
+  away_score: number;
   version: number;
 };
 type PlayerRow = { id: string; nickname: string; is_host: boolean; joined_quarter: number; token_hash: string };
@@ -88,6 +90,8 @@ const lobbyInfo = (l: LobbyRow): LobbyInfo => ({
   quarter: l.quarter,
   phase: l.phase,
   publishedThrough: l.published_through,
+  homeScore: l.home_score ?? 0,
+  awayScore: l.away_score ?? 0,
   version: l.version,
 });
 const question = (q: QuestionRow): Question => ({ ...q });
@@ -530,6 +534,16 @@ async function hostAction(t: Db, lobby: LobbyRow, a: Action): Promise<boolean> {
       if (!q) return false;
       if (!editable(lobby, q.quarter)) throw new GameError(409, "Picks are already open for that quarter.");
       await t.query(`delete from lobby_questions where id = $1`, [a.questionId]);
+      return true;
+    }
+    case "addScore": {
+      if (!Number.isInteger(a.delta) || Math.abs(a.delta) > 8) throw new GameError(400, "Bad score change.");
+      const col = a.side === "home" ? "home_score" : a.side === "away" ? "away_score" : null;
+      if (!col) throw new GameError(400, "Bad team.");
+      const next = Math.min(199, Math.max(0, lobby[col] + a.delta));
+      if (next === lobby[col]) return false;
+      await t.query(`update lobbies set ${col} = $2 where id = $1`, [lobby.id, next]);
+      lobby[col] = next;
       return true;
     }
     case "updateGame": {

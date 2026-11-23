@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { LobbyView, Question, QuarterResult } from "@/lib/types";
 import { useStored } from "@/lib/client";
-import { Avatar, Button, Label, cx } from "../ui";
+import { Avatar, Button, CategoryChip, Label, cx } from "../ui";
 import { CheckIcon, LockIcon } from "../icons";
 import { Leaderboard } from "./Leaderboard";
 import { Shell, ease } from "./common";
@@ -148,14 +148,13 @@ function Reveal({ q, result, view, index, total }: { q: Question; result: Quarte
 
   return (
     <div>
-      <div className="flex items-center gap-2">
-        <Label className="text-volt/80">{q.category}</Label>
-        <span className="text-mute text-[12px]">·</span>
-        <span className="text-[12px] text-mute tnum font-medium">
-          {index + 1}/{total}
+      <div className="flex items-center justify-between gap-3">
+        <CategoryChip>{q.category}</CategoryChip>
+        <span className="text-[13px] text-mute tnum font-medium">
+          {index + 1} of {total}
         </span>
       </div>
-      <h2 className="mt-3 text-[28px] leading-[1.12] font-semibold tracking-[-0.025em] text-balance">{q.prompt}</h2>
+      <h2 className="mt-4 text-[28px] leading-[1.12] font-semibold tracking-[-0.025em] text-balance">{q.prompt}</h2>
 
       <div className="mt-6 space-y-2.5">
         {q.options.map((o) => {

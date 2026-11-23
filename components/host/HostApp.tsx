@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useLobby, ApiError } from "@/lib/client";
 import type { Action, LobbyView, Phase, Question } from "@/lib/types";
-import { Avatar, Button, Field, InviteButton, Label, Matchup, Sheet, Toast, Wordmark, cx, inputCls } from "../ui";
+import { Avatar, Button, Field, InviteButton, Label, Matchup, Sheet, TeamChip, Toast, Wordmark, cx, inputCls } from "../ui";
 import { ArrowRight, CheckIcon, GridIcon, LockIcon, PencilIcon, PlusIcon, SwapIcon, TrashIcon, XIcon } from "../icons";
 import { Loading } from "../player/PlayerApp";
 import { Leaderboard } from "../screens/Leaderboard";
@@ -120,6 +120,7 @@ function Dashboard({ view, run, runQuiet, busy }: { view: LobbyView; run: Run; r
             </div>
           </section>
           <aside className="space-y-8">
+            {lobby.phase !== "setup" && lobby.phase !== "final" && <ScorePanel view={view} run={runQuiet} />}
             <PlayersPanel view={view} run={runQuiet} />
             <section>
               <div className="flex items-baseline justify-between mb-3">
@@ -547,5 +548,43 @@ function SettingsSheet({ open, onClose, view, run }: { open: boolean; onClose: (
         </Button>
       </div>
     </Sheet>
+  );
+}
+
+/** The host keeps the scoreboard on players' live screens up to date. */
+function ScorePanel({ view, run }: { view: LobbyView; run: (a: Action) => void }) {
+  const { lobby } = view;
+  const row = (side: "away" | "home") => {
+    const name = side === "away" ? lobby.away : lobby.home;
+    const score = side === "away" ? lobby.awayScore : lobby.homeScore;
+    const bump = (delta: number) => run({ type: "addScore", side, delta });
+    return (
+      <div className="flex items-center gap-3 px-4 h-16">
+        <TeamChip name={name} />
+        <span className="w-10 font-display font-bold text-[30px] leading-none tnum">{score}</span>
+        <div className="flex-1 flex justify-end gap-1.5">
+          {[7, 3, 2, 1].map((n) => (
+            <button key={n} onClick={() => bump(n)} className="h-9 min-w-9 px-2 rounded-lg bg-raised-2 hover:bg-[#2a2a30] text-[14px] font-semibold tnum active:scale-95 transition">
+              +{n}
+            </button>
+          ))}
+          <button onClick={() => bump(-1)} disabled={score === 0} className="h-9 w-9 rounded-lg text-mute hover:text-fg hover:bg-white/5 text-[14px] font-semibold disabled:opacity-30" aria-label={`Take a point from ${name}`}>
+            −1
+          </button>
+        </div>
+      </div>
+    );
+  };
+  return (
+    <section>
+      <div className="flex items-baseline justify-between mb-3">
+        <Label>Scoreboard</Label>
+        <span className="text-[12px] text-mute">Shows on players&apos; live screen</span>
+      </div>
+      <div className="rounded-2xl border border-line bg-panel divide-y divide-line">
+        {row("away")}
+        {row("home")}
+      </div>
+    </section>
   );
 }

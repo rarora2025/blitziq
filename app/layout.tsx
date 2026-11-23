@@ -12,7 +12,7 @@ const display = Saira_Condensed({
 
 export const metadata: Metadata = {
   title: "blitz.",
-  description: "Call the quarter. A live NFL prediction game for friends.",
+  description: "A live NFL prediction game for friends.",
   appleWebApp: { capable: true, title: "blitz.", statusBarStyle: "black-translucent" },
 };
 

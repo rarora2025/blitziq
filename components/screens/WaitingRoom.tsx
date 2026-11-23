@@ -53,7 +53,7 @@ export function WaitingRoom({
             {me.isHost ? `Open Q${lobby.quarter} picks when everyone's in.` : `Waiting for host to open Q${lobby.quarter}.`}
           </div>
           <div className="text-[14px] text-dim mt-0.5">
-            {lobby.quarter === 1 ? "Five questions. One Lock. Call the quarter." : `Q${lobby.quarter} picks are next.`}
+            {lobby.quarter === 1 ? "Five questions. One Lock. Most points wins." : `Q${lobby.quarter} picks are next.`}
           </div>
         </div>
       </motion.section>

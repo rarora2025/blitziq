@@ -108,6 +108,8 @@ export interface LobbyInfo {
   quarter: number;
   phase: Phase;
   publishedThrough: number;
+  homeScore: number;
+  awayScore: number;
   version: number;
 }
 
@@ -149,6 +151,7 @@ export type Action =
     }
   | { type: "removeQuestion"; questionId: string }
   | { type: "moveQuestion"; questionId: string; direction: -1 | 1 }
+  | { type: "addScore"; side: "home" | "away"; delta: number }
   | { type: "updateGame"; name: string; home: string; away: string; gameDate: string | null }
   | { type: "submit"; answers: Record<string, string>; lock: string | null }
   | { type: "removePlayer"; playerId: string };

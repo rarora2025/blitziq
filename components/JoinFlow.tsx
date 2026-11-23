@@ -82,7 +82,6 @@ export function JoinFlow({ initialCode = "" }: { initialCode?: string }) {
           className="mb-12"
         >
           <Wordmark className="text-[76px]" />
-          <p className="mt-3 text-[22px] text-dim tracking-tight font-medium">Call the quarter.</p>
         </motion.div>
 
         <AnimatePresence mode="wait" initial={false}>

@@ -367,3 +367,26 @@ export function Segmented<T extends string>({
     </div>
   );
 }
+
+export function CategoryChip({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center h-7 px-3 rounded-full bg-volt/[0.12] text-volt text-[11.5px] font-bold uppercase tracking-[0.12em] ring-1 ring-inset ring-volt/25">
+      {children}
+    </span>
+  );
+}
+
+/** What a question is worth: 10 / 50 normally, 20 / 100 as a Lock. */
+export function Worth({ locked, className = "" }: { locked?: boolean; className?: string }) {
+  const [base, solo] = locked ? [20, 100] : [10, 50];
+  return (
+    <span className={cx("inline-flex items-center gap-1.5 text-[13px] font-medium", locked ? "text-volt" : "text-dim", className)}>
+      <span className={cx("inline-flex items-center h-6 px-2 rounded-md font-display font-bold text-[15px] tracking-wide tnum", locked ? "bg-volt text-volt-ink" : "bg-raised-2 text-fg")}>
+        {base} PTS
+      </span>
+      <span>
+        if right · <span className={cx("font-semibold tnum", locked ? "text-volt" : "text-fg")}>{solo}</span> if you&apos;re the only one
+      </span>
+    </span>
+  );
+}

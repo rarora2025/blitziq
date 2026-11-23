@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { LobbyView, Question } from "@/lib/types";
 import { useStored } from "@/lib/client";
-import { Button, Label, cx } from "../ui";
+import { Button, CategoryChip, Worth, cx } from "../ui";
 import { CheckIcon, ChevronLeft, LockIcon } from "../icons";
 import { Shell, ease } from "./common";
 
@@ -188,14 +188,14 @@ function QuestionCard({
   const [showRule, setShowRule] = useState(false);
   return (
     <div>
-      <div className="flex items-center gap-2">
-        <Label className="text-volt/80">{q.category}</Label>
-        <span className="text-mute text-[12px]">·</span>
-        <span className="text-[12px] text-mute tnum font-medium">
-          {index + 1}/{total}
+      <div className="flex items-center justify-between gap-3">
+        <CategoryChip>{q.category}</CategoryChip>
+        <span className="text-[13px] text-mute tnum font-medium">
+          {index + 1} of {total}
         </span>
       </div>
-      <h2 className="mt-3 text-[30px] leading-[1.12] font-semibold tracking-[-0.025em] text-balance">{q.prompt}</h2>
+      <h2 className="mt-4 text-[30px] leading-[1.12] font-semibold tracking-[-0.025em] text-balance">{q.prompt}</h2>
+      <Worth locked={locked} className="mt-3" />
 
       <div className="mt-7 space-y-2.5" role="radiogroup">
         {q.options.map((o, i) => {
@@ -330,8 +330,13 @@ function Review({
             >
               <button onClick={() => onEdit(i)} className="flex-1 min-w-0 text-left px-4 py-3.5">
                 <span className="block text-[14px] text-dim leading-snug line-clamp-2">{q.prompt}</span>
-                <span className={cx("block mt-1 text-[17px] font-semibold tracking-tight", pick ? "text-fg" : "text-mute")}>
-                  {pick ? pick.label : "No pick"}
+                <span className="mt-1 flex items-baseline gap-2">
+                  <span className={cx("text-[17px] font-semibold tracking-tight", pick ? "text-fg" : "text-mute")}>{pick ? pick.label : "No pick"}</span>
+                  {pick && (
+                    <span className={cx("text-[12px] font-semibold tnum", locked ? "text-volt" : "text-mute")}>
+                      {locked ? "20 / 100 pts" : "10 / 50 pts"}
+                    </span>
+                  )}
                 </span>
               </button>
               <button

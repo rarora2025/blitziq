@@ -5,6 +5,7 @@ import type { LobbyView, Question, Submission } from "@/lib/types";
 import { Label, cx } from "../ui";
 import { LockIcon } from "../icons";
 import { AvatarStack, PlayerGrid, Shell, ease } from "./common";
+import { Bars, Field, Scoreboard } from "./Scoreboard";
 
 function currentQuestions(view: LobbyView) {
   return view.questions.filter((q) => q.quarter === view.lobby.quarter).sort((a, b) => a.position - b.position);
@@ -86,23 +87,30 @@ export function LiveScreen({ view }: { view: LobbyView }) {
 
   return (
     <Shell>
-      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }} className="pt-6">
-        <div className="flex items-center gap-2.5">
-          {grading ? (
-            <span className="text-[12px] font-bold tracking-[0.16em] text-dim">FINAL · Q{lobby.quarter}</span>
-          ) : (
-            <span className="inline-flex items-center gap-2 text-[12px] font-bold tracking-[0.16em] text-volt">
-              <span className="size-2 rounded-full bg-volt pulse-dot" /> LIVE NOW
-            </span>
-          )}
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease }} className="pt-4 space-y-3">
+        <Scoreboard lobby={lobby} />
+        <Field lobby={lobby} />
+        <div className="rounded-2xl bg-panel border border-line px-5 py-4 text-center">
+          <div className="flex items-center justify-center gap-2.5 text-[19px] font-semibold tracking-tight">
+            {!grading && <Bars />}
+            {grading ? `Q${lobby.quarter} is in the books` : `Q${lobby.quarter} in progress`}
+          </div>
+          <p className="mt-1.5 text-[15px] text-dim leading-snug">
+            {grading
+              ? "The host is grading. Results drop any second."
+              : mySubmission
+                ? "Picks are locked. Results coming after the quarter."
+                : `You sat this one out. You're in for Q${Math.min(4, lobby.quarter + 1)}.`}
+          </p>
         </div>
-        <h1 className="mt-2 text-[40px] font-bold tracking-[-0.035em] leading-[1.02]">
-          {grading ? `Q${lobby.quarter} is in the books.` : `Q${lobby.quarter} is on.`}
-        </h1>
-        <p className="mt-2.5 text-[16px] text-dim">
-          {grading ? "The host is grading. Results drop any second." : mySubmission ? "Your picks are in. Sweat it out." : `You sat this one out. You're in for Q${Math.min(4, lobby.quarter + 1)}.`}
-        </p>
       </motion.section>
+
+      {mySubmission && (
+        <section className="mt-8">
+          <Label className="mb-3">Your picks</Label>
+          <MyPicks questions={questions} submission={mySubmission} />
+        </section>
+      )}
 
       <div className="mt-8 flex items-center justify-between">
         <Label>How the lobby called it</Label>
